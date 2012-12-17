@@ -28,8 +28,8 @@ app.init = function(){
 	material = new THREE.MeshBasicMaterial({color: 0xdd3333, wireframe: false});
 	var floorMesh = new THREE.Mesh(floor, material);
 	floorMesh.rotation.x = -90*DEGREES_TO_RAD;
+	
 	scene.add(floorMesh);
-	console.debug(floorMesh, floor, material);
 	
 	geometry = new THREE.CubeGeometry( 200, 200, 200 );
 	material = new THREE.MeshFaceMaterial([
@@ -101,22 +101,13 @@ app.cameraRotate = function(event){
 	camera.lookAt(app.cameraTargetVector);
 }
 app.cameraZoom = function(event, delta, deltaX, deltaY){
-	//console.debug(event, delta, deltaX, deltaY);
 	var vector = new THREE.Vector3(),
-	    step = deltaY * 10;
+	    stepPercentage = 1 - deltaY / 20;
 	
 	vector.sub(camera.position, app.cameraTargetVector);
-	
-	var m = new THREE.Matrix4(),
-	    transVector = new THREE.Vector3(step, step, step);
-	
-	//needed for when coordinates are negative
-	if(vector.x < 0) transVector.x *= -1
-	if(vector.y < 0) transVector.y *= -1
-	if(vector.z < 0) transVector.z *= -1
-	
-	m.translate(transVector);
-	m.multiplyVector3(vector);
+	vector.x *= stepPercentage;
+	vector.y *= stepPercentage;
+	vector.z *= stepPercentage;
 	
 	camera.position.add(app.cameraTargetVector, vector);
 }
@@ -124,9 +115,8 @@ app.cameraZoom = function(event, delta, deltaX, deltaY){
 app.animate = function(){
 	// note: three.js includes requestAnimationFrame shim
 	requestAnimationFrame(app.animate);
-
+	
 	renderer.render( scene, camera );
 }
-
 
 })(jQuery);
