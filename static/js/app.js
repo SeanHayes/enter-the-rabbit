@@ -5,15 +5,18 @@ var geometry, material;
 var app = {};
 
 var DEGREES_TO_RAD = Math.PI/180;
+var RAD_TO_DEGREES = 180/Math.PI;
 
 $(document).ready(function(){
 	app.init();
 	app.animate();
 });
 
+//Camera should look to the origin by default, but later on may need to focus on specific objects
 app.cameraTargetVector = new THREE.Vector3(0, 0, 0);
 app.init = function(){
-	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+	// OrthographicCamera may conceivably render faster.
+	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
 	camera.position.x = 500;
 	camera.position.y = 500;
 	camera.position.z = 500;
@@ -66,21 +69,32 @@ app.init = function(){
 }
 
 app.cameraRotate = function(event){
+	//TODO: it would be great if we ensured we only computed this stuff at most once per frame
 	var mouseDiffX = app.pageX - event.pageX;
 	var mouseDiffY = app.pageY - event.pageY;
 	
 	app.pageX = event.pageX;
 	app.pageY = event.pageY;
 	
-	var vector = new THREE.Vector3()
+	var vector = new THREE.Vector3();
 	vector.sub(camera.position, app.cameraTargetVector);
 	
-	var m = new THREE.Matrix4();
-	m.rotateY(mouseDiffX * DEGREES_TO_RAD);
-	//this probably isn't quite right but will work for now
-	//also, need to reverse direction when rotated around Y axis
-	m.rotateX(mouseDiffY * DEGREES_TO_RAD);
-	m.multiplyVector3(vector);
+	var radius = vector.length(), x, y, z;
+	
+	var theta, phi;
+	theta = Math.acos(vector.y/radius) + (mouseDiffY * DEGREES_TO_RAD);
+	phi = Math.atan2(vector.x, vector.z) + (mouseDiffX * DEGREES_TO_RAD);
+	
+	// Disallow negative degree inclination. It doesn't cause any serious
+	// problems but the camera is sort of jittery. Can't set the value to 0
+	// since the camera rotation gets reset, so we set it to 1 degree instead.
+	// This problem doesn't seem to  happen at 180 degrees.
+	if (theta < 0){theta = 0}
+	else if(theta > Math.PI){theta = Math.PI}
+	
+	vector.z = radius * Math.sin(theta) * Math.cos(phi);
+	vector.x = radius * Math.sin(theta) * Math.sin(phi);
+	vector.y = radius * Math.cos(theta);
 	
 	camera.position.add(app.cameraTargetVector, vector);
 	
