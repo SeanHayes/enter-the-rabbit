@@ -1,8 +1,8 @@
+var app = {};
 (function($){
 
 var camera, scene, renderer;
 var geometry, material;
-var app = {};
 
 var DEGREES_TO_RAD = Math.PI/180;
 var RAD_TO_DEGREES = 180/Math.PI;
@@ -14,6 +14,12 @@ $(document).ready(function(){
 
 //Camera should look to the origin by default, but later on may need to focus on specific objects
 app.cameraTargetVector = new THREE.Vector3(0, 0, 0);
+app.cameraGuideLines = [];
+app.setCameraGuideVisibility = function(visible){
+	app.cameraGuideLines[0].visible = visible;
+	app.cameraGuideLines[1].visible = visible;
+	app.cameraGuideLines[2].visible = visible;
+}
 app.init = function(){
 	// OrthographicCamera may conceivably render faster.
 	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
@@ -24,6 +30,24 @@ app.init = function(){
 	
 	scene = new THREE.Scene();
 	
+	
+	// Camera guide, helps orient user while rotating
+	var cameraGuideGeo = new THREE.CircleGeometry(200, 32);
+	
+	app.cameraGuideLines.push(new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0x0000ff})));
+	app.cameraGuideLines.push(new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0x00ff00})));
+	app.cameraGuideLines.push(new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0xff0000})));
+	
+	app.cameraGuideLines[1].rotation = new THREE.Vector3(90*DEGREES_TO_RAD, 0, 0);
+	app.cameraGuideLines[2].rotation = new THREE.Vector3(0, 90*DEGREES_TO_RAD, 0);
+	
+	app.setCameraGuideVisibility(false);
+	
+	scene.add(app.cameraGuideLines[0]);
+	scene.add(app.cameraGuideLines[1]);
+	scene.add(app.cameraGuideLines[2]);
+	
+	// Floor, what the other objects will appear on
 	floor = new THREE.PlaneGeometry(1000, 1000);
 	material = new THREE.MeshBasicMaterial({color: 0xdd3333, wireframe: false});
 	var floorMesh = new THREE.Mesh(floor, material);
@@ -54,6 +78,7 @@ app.init = function(){
 		app.pageX = event.pageX;
 		app.pageY = event.pageY;
 		$(renderer.domElement).bind('mousemove', app.cameraRotate);
+		app.setCameraGuideVisibility(true);
 		
 		$(renderer.domElement).unbind('mousewheel', app.cameraZoom);
 	});
@@ -62,6 +87,7 @@ app.init = function(){
 		$(renderer.domElement).unbind('mousemove', app.cameraRotate);
 		app.pageX = null;
 		app.pageY = null;
+		app.setCameraGuideVisibility(false);
 		
 		$(renderer.domElement).bind('mousewheel', app.cameraZoom);
 	});
