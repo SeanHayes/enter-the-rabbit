@@ -38,8 +38,9 @@ app.init = function(){
 	app.cameraGuideLines.push(new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0x00ff00})));
 	app.cameraGuideLines.push(new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0xff0000})));
 	
-	app.cameraGuideLines[1].rotation = new THREE.Vector3(90*DEGREES_TO_RAD, 0, 0);
-	app.cameraGuideLines[2].rotation = new THREE.Vector3(0, 90*DEGREES_TO_RAD, 0);
+	app.cameraGuideLines[0].rotation = new THREE.Vector3(0, 0, 90*DEGREES_TO_RAD);
+	app.cameraGuideLines[1].rotation = new THREE.Vector3(-90*DEGREES_TO_RAD, 0, 0);
+	app.cameraGuideLines[2].rotation = new THREE.Vector3(0, -90*DEGREES_TO_RAD, 0);
 	
 	app.setCameraGuideVisibility(false);
 	
