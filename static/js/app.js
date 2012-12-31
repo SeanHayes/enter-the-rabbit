@@ -1,8 +1,8 @@
 var app = {};
+
 (function($){
 
 var camera, scene, renderer;
-var geometry, material;
 
 var DEGREES_TO_RAD = Math.PI/180;
 var RAD_TO_DEGREES = 180/Math.PI;
@@ -21,17 +21,20 @@ app.setCameraGuideVisibility = function(visible){
 	app.cameraGuideLines[2].visible = visible;
 }
 app.init = function(){
-	// OrthographicCamera may conceivably render faster.
+	scene = new THREE.Scene();
+	
+	// Begin Camera ------------------------------------------------------------
 	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
 	camera.position.x = 500;
 	camera.position.y = 500;
 	camera.position.z = 500;
 	camera.lookAt(app.cameraTargetVector);
+	// End Camera
 	
-	scene = new THREE.Scene();
 	
-	
-	// Camera guide, helps orient user while rotating
+	// Begin Camera Guide ------------------------------------------------------
+	// helps orient user while rotating scene
+	// TODO: when app.cameraTargetVector changes, this needs to be moved to the same location
 	var cameraGuideGeo = new THREE.CircleGeometry(200, 32);
 	
 	app.cameraGuideLines.push(new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0x0000ff})));
@@ -47,17 +50,22 @@ app.init = function(){
 	scene.add(app.cameraGuideLines[0]);
 	scene.add(app.cameraGuideLines[1]);
 	scene.add(app.cameraGuideLines[2]);
+	// End Camera Guide
 	
-	// Floor, what the other objects will appear on
-	floor = new THREE.PlaneGeometry(1000, 1000);
-	material = new THREE.MeshBasicMaterial({color: 0xdd3333, wireframe: false});
-	var floorMesh = new THREE.Mesh(floor, material);
+	
+	// Begin Floor -------------------------------------------------------------
+	// what the other objects will appear on
+	var floorGeometry = new THREE.PlaneGeometry(1000, 1000);
+	var floorMaterial = new THREE.MeshBasicMaterial({color: 0xdd3333, wireframe: false});
+	var floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
 	floorMesh.rotation.x = -90*DEGREES_TO_RAD;
 	
 	scene.add(floorMesh);
+	// End Floor
 	
-	geometry = new THREE.CubeGeometry( 200, 200, 200 );
-	material = new THREE.MeshFaceMaterial([
+	// Begin Example Object ----------------------------------------------------
+	/*var exGeometry = new THREE.CubeGeometry( 200, 200, 200 );
+	var exMaterial = new THREE.MeshFaceMaterial([
 		new THREE.MeshBasicMaterial({color: 0x220022, wireframe: false}),
 		new THREE.MeshBasicMaterial({color: 0x002222, wireframe: false}),
 		new THREE.MeshBasicMaterial({color: 0x222200, wireframe: false}),
@@ -66,8 +74,14 @@ app.init = function(){
 		new THREE.MeshBasicMaterial({color: 0x000022, wireframe: false}),
 	]);
 	
+	scene.add(new THREE.Mesh(exGeometry, exMaterial));*/
+	// End Example Object
 	
-	scene.add(new THREE.Mesh(geometry, material));
+	// Begin Add Body ----------------------------------------------------------
+	var body1 = new rabbit.Body();
+	
+	scene.add(body1);
+	// End Add Body
 	
 	renderer = new THREE.CanvasRenderer();
 	renderer.setSize( window.innerWidth, window.innerHeight );
