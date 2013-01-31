@@ -1,4 +1,6 @@
-var app = {};
+var app = {},
+    stats1,
+    stats2;
 
 (function($){
 
@@ -7,24 +9,45 @@ var camera, scene, renderer;
 var DEGREES_TO_RAD = Math.PI/180;
 var RAD_TO_DEGREES = 180/Math.PI;
 
+// Begin Stats
+stats1 = new Stats();
+stats1.setMode(0);
+stats1.domElement.style.position = 'absolute';
+stats1.domElement.style.left = '0px';
+stats1.domElement.style.top = '0px';
+
+stats2 = new Stats();
+stats2.setMode(1);
+stats2.domElement.style.position = 'absolute';
+stats2.domElement.style.left = '0px';
+stats2.domElement.style.top = '50px';
+// End Stats
+
 $(document).ready(function(){
+	document.body.appendChild( stats1.domElement );
+	document.body.appendChild( stats2.domElement );
+	
 	app.init();
 	app.animate();
 });
 
 //Camera should look to the origin by default, but later on may need to focus on specific objects
 app.cameraTargetVector = new THREE.Vector3(0, 0, 0);
-app.cameraGuideLines = [];
 app.setCameraGuideVisibility = function(visible){
-	app.cameraGuideLines[0].visible = visible;
-	app.cameraGuideLines[1].visible = visible;
-	app.cameraGuideLines[2].visible = visible;
+	app.cameraGuide.traverse(function(obj){
+		obj.visible = visible;
+	});
 }
 app.init = function(){
-	scene = new THREE.Scene();
+	app.world = tQuery.createWorld();
+	
+	scene = app.world._scene;
+	renderer = app.world._renderer;
+	
+	document.body.appendChild( renderer.domElement );
 	
 	// Begin Camera ------------------------------------------------------------
-	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
+	camera = app.world._camera;//new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
 	camera.position.x = 500;
 	camera.position.y = 500;
 	camera.position.z = 500;
@@ -35,21 +58,23 @@ app.init = function(){
 	// Begin Camera Guide ------------------------------------------------------
 	// helps orient user while rotating scene
 	// TODO: when app.cameraTargetVector changes, this needs to be moved to the same location
-	var cameraGuideGeo = new THREE.CircleGeometry(200, 32);
+	var cameraGuideGeo = new THREE.CircleGeometry(200, 32),
+	    cameraGuideLines = [
+	        new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0x0000ff})),
+	        new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0x00ff00})),
+	        new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0xff0000})),
+	    ];
 	
-	app.cameraGuideLines.push(new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0x0000ff})));
-	app.cameraGuideLines.push(new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0x00ff00})));
-	app.cameraGuideLines.push(new THREE.Line(cameraGuideGeo, new THREE.LineBasicMaterial({color: 0xff0000})));
+	cameraGuideLines[0].rotation = new THREE.Vector3(0, 0, 90*DEGREES_TO_RAD);
+	cameraGuideLines[1].rotation = new THREE.Vector3(-90*DEGREES_TO_RAD, 0, 0);
+	cameraGuideLines[2].rotation = new THREE.Vector3(0, -90*DEGREES_TO_RAD, 0);
 	
-	app.cameraGuideLines[0].rotation = new THREE.Vector3(0, 0, 90*DEGREES_TO_RAD);
-	app.cameraGuideLines[1].rotation = new THREE.Vector3(-90*DEGREES_TO_RAD, 0, 0);
-	app.cameraGuideLines[2].rotation = new THREE.Vector3(0, -90*DEGREES_TO_RAD, 0);
-	
+	app.cameraGuide = new THREE.Object3D();
+	app.cameraGuide.add(cameraGuideLines[0])
+	app.cameraGuide.add(cameraGuideLines[1])
+	app.cameraGuide.add(cameraGuideLines[2]);
+	scene.add(app.cameraGuide);
 	app.setCameraGuideVisibility(false);
-	
-	scene.add(app.cameraGuideLines[0]);
-	scene.add(app.cameraGuideLines[1]);
-	scene.add(app.cameraGuideLines[2]);
 	// End Camera Guide
 	
 	
@@ -78,15 +103,18 @@ app.init = function(){
 	// End Example Object
 	
 	// Begin Add Body ----------------------------------------------------------
-	var body1 = new rabbit.Body();
+	//var body1 = new rabbit.Body();
 	
-	scene.add(body1);
+	//scene.add(body1);
+	
+	var loader = new THREE.JSONLoader();
+	loader.load( "static/js/humanoid1.json", function( geometry ) {
+		var mesh = new THREE.Mesh( geometry, new THREE.MeshNormalMaterial() );
+		mesh.scale.set( 10, 10, 10 );
+		scene.add(mesh);
+		console.debug(mesh);
+	});
 	// End Add Body
-	
-	renderer = new THREE.CanvasRenderer();
-	renderer.setSize( window.innerWidth, window.innerHeight );
-	
-	document.body.appendChild( renderer.domElement );
 	
 	// camera rotation
 	$(renderer.domElement).mousedown(function(event){
@@ -153,11 +181,17 @@ app.cameraZoom = function(event, delta, deltaX, deltaY){
 	camera.position.add(app.cameraTargetVector, vector);
 }
 
-app.animate = function(){
+app.animate = function(timestamp){
+	stats1.begin();
+	stats2.begin();
+	
 	// note: three.js includes requestAnimationFrame shim
-	requestAnimationFrame(app.animate);
+	requestAnimationFrame(app.animate, renderer.domElement);
 	
 	renderer.render( scene, camera );
+	
+	stats1.end();
+	stats2.end();
 }
 
 })(jQuery);
