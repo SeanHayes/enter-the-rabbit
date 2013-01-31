@@ -9,6 +9,36 @@ var camera, scene, renderer;
 var DEGREES_TO_RAD = Math.PI/180;
 var RAD_TO_DEGREES = 180/Math.PI;
 
+var animation = {
+	name: "punch",
+	length: 6000,
+	fps: 0.03,  // fpms actually
+	hierarchy: [
+		{
+		parent: 11,
+		keys: [
+			{
+				time: 0,
+				pos: [ 0, 0, 0 ],
+				rot: [ 0, 0, 0, 0 ],
+				scl: [ 10, 10, 10 ]
+			},
+			{
+				time: 2000,
+				rot: [ 5, 5, 0, 0 ]
+			},
+			{
+				time: 6000,
+				pos: [ 0, 0, 0 ],
+				rot: [ 10, 10, 0, 0 ],
+				scl: [ 10, 10, 10 ]
+			}
+		]
+		},
+	]
+}
+THREE.AnimationHandler.add(animation);
+
 // Begin Stats
 stats1 = new Stats();
 stats1.setMode(0);
@@ -28,10 +58,36 @@ $(document).ready(function(){
 	document.body.appendChild( stats2.domElement );
 	
 	app.init();
-	app.animate();
+	requestAnimationFrame(app.animate, renderer.domElement);
 });
 
+function rotateVector(v, phiDegrees, thetaDegrees, fix){
+	v = v.clone();
+	var radius = v.length(),
+	    theta = Math.acos(v.y/radius) + (thetaDegrees * DEGREES_TO_RAD),
+	    phi   = Math.atan2(v.x, v.z) + (phiDegrees * DEGREES_TO_RAD);
+	
+	// Disallow negative degree inclination. It doesn't cause any serious
+	// problems but the camera is sort of jittery. Can't set the value to 0
+	// since the camera rotation gets reset, so we set it to >0 degrees instead.
+	// This problem doesn't seem to happen at 180 degrees.
+	if (fix){
+		if (theta <= 0){theta = 0.1*DEGREES_TO_RAD}
+		else if(theta > Math.PI){theta = Math.PI}
+	}
+	
+	v.z = radius * Math.sin(theta) * Math.cos(phi);
+	v.x = radius * Math.sin(theta) * Math.sin(phi);
+	v.y = radius * Math.cos(theta);
+	
+	return v
+}
+
 //Camera should look to the origin by default, but later on may need to focus on specific objects
+app.cameraCurrentActions = {
+	rotating: false,
+	panning: false,
+}
 app.cameraTargetVector = new THREE.Vector3(0, 0, 0);
 app.setCameraGuideVisibility = function(visible){
 	app.cameraGuide.traverse(function(obj){
@@ -45,15 +101,6 @@ app.init = function(){
 	renderer = app.world._renderer;
 	
 	document.body.appendChild( renderer.domElement );
-	
-	// Begin Camera ------------------------------------------------------------
-	camera = app.world._camera;//new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
-	camera.position.x = 500;
-	camera.position.y = 500;
-	camera.position.z = 500;
-	camera.lookAt(app.cameraTargetVector);
-	// End Camera
-	
 	
 	// Begin Camera Guide ------------------------------------------------------
 	// helps orient user while rotating scene
@@ -75,8 +122,17 @@ app.init = function(){
 	app.cameraGuide.add(cameraGuideLines[2]);
 	scene.add(app.cameraGuide);
 	app.setCameraGuideVisibility(false);
+	
+	app.cameraTargetVector = app.cameraGuide.position;
 	// End Camera Guide
 	
+	// Begin Camera ------------------------------------------------------------
+	camera = app.world._camera;//new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
+	camera.position.x = 500;
+	camera.position.y = 500;
+	camera.position.z = 500;
+	camera.lookAt(app.cameraTargetVector);
+	// End Camera
 	
 	// Begin Floor -------------------------------------------------------------
 	// what the other objects will appear on
@@ -112,29 +168,65 @@ app.init = function(){
 		var mesh = new THREE.Mesh( geometry, new THREE.MeshNormalMaterial() );
 		mesh.scale.set( 10, 10, 10 );
 		scene.add(mesh);
+		
+		//var punchAni = new THREE.Animation(mesh, 'punch');
+		//punchAni.play(false);
 		console.debug(mesh);
 	});
 	// End Add Body
 	
+	// Set Up Input Event Handlers
+	$(renderer.domElement).mousemove(function(e){
+		window.pageX = e.pageX;
+		window.pageY = e.pageY;
+	});
+	
 	// camera rotation
 	$(renderer.domElement).mousedown(function(event){
-		app.pageX = event.pageX;
-		app.pageY = event.pageY;
-		$(renderer.domElement).bind('mousemove', app.cameraRotate);
-		app.setCameraGuideVisibility(true);
+		var actions = app.cameraCurrentActions;
+		
+		switch(event.which){
+			case 1:
+				actions.rotating = true;
+				//$(renderer.domElement).bind('mousemove', app.cameraRotate);
+				break;
+			case 2:
+				actions.panning = true;
+				//$(renderer.domElement).bind('mousemove', app.cameraPan);
+				break;
+		}
+		
+		if(actions.rotating || actions.panning)
+			app.setCameraGuideVisibility(true);
 		
 		$(renderer.domElement).unbind('mousewheel', app.cameraZoom);
 	});
 	// we bind to document since the mouse button might not be released over the canvas
 	$(document).mouseup(function(event){
-		$(renderer.domElement).unbind('mousemove', app.cameraRotate);
-		app.pageX = null;
-		app.pageY = null;
-		app.setCameraGuideVisibility(false);
+		var actions = app.cameraCurrentActions;
+		
+		switch(event.which){
+			case 1:
+				actions.rotating = false;
+				break;
+			case 2:
+				actions.panning = false;
+				break;
+		}
+		
+		if(!actions.rotating && !actions.panning)
+			app.setCameraGuideVisibility(false);
 		
 		$(renderer.domElement).bind('mousewheel', app.cameraZoom);
 	});
+	
+	// Zoom
 	$(renderer.domElement).bind('mousewheel', app.cameraZoom);
+	
+	// Change camera target
+	$(renderer.domElement).dblclick(function(event){
+		console.debug('dblclick');
+	});
 }
 
 app.cameraRotate = function(event){
@@ -142,30 +234,36 @@ app.cameraRotate = function(event){
 	var mouseDiffX = app.pageX - event.pageX;
 	var mouseDiffY = app.pageY - event.pageY;
 	
-	app.pageX = event.pageX;
-	app.pageY = event.pageY;
-	
 	var vector = new THREE.Vector3();
-	vector.sub(camera.position, app.cameraTargetVector);
+	vector.subVectors(camera.position, app.cameraTargetVector);
 	
-	var radius = vector.length(), x, y, z;
+	vector = rotateVector(vector, mouseDiffX, mouseDiffY, true);
 	
-	var theta, phi;
-	theta = Math.acos(vector.y/radius) + (mouseDiffY * DEGREES_TO_RAD);
-	phi = Math.atan2(vector.x, vector.z) + (mouseDiffX * DEGREES_TO_RAD);
+	camera.position.addVectors(app.cameraTargetVector, vector);
 	
-	// Disallow negative degree inclination. It doesn't cause any serious
-	// problems but the camera is sort of jittery. Can't set the value to 0
-	// since the camera rotation gets reset, so we set it to 1 degree instead.
-	// This problem doesn't seem to  happen at 180 degrees.
-	if (theta < 0){theta = 0}
-	else if(theta > Math.PI){theta = Math.PI}
+	camera.lookAt(app.cameraTargetVector);
+}
+app.cameraPan = function(event){
+	//TODO: it would be great if we ensured we only computed this stuff at most once per frame
+	var mouseDiffX = app.pageX - event.pageX;
+	var mouseDiffY = app.pageY - event.pageY;
 	
-	vector.z = radius * Math.sin(theta) * Math.cos(phi);
-	vector.x = radius * Math.sin(theta) * Math.sin(phi);
-	vector.y = radius * Math.cos(theta);
+	//get copies of this vector rotated 90 degrees,
+	//normalize these copies to the mouseDiffX and mouseDiffY
+	//add the
+	var v = new THREE.Vector3();
+	v.subVectors(app.cameraTargetVector, camera.position);
 	
-	camera.position.add(app.cameraTargetVector, vector);
+	var hVector = rotateVector(v, -90, 0),
+	    vVector = rotateVector(v, 0, 90);
+	
+	hVector.setLength(mouseDiffX);
+	vVector.setLength(mouseDiffY);
+	
+	camera.position.add(hVector);
+	camera.position.add(vVector);
+	app.cameraTargetVector.add(hVector);
+	app.cameraTargetVector.add(vVector);
 	
 	camera.lookAt(app.cameraTargetVector);
 }
@@ -173,21 +271,44 @@ app.cameraZoom = function(event, delta, deltaX, deltaY){
 	var vector = new THREE.Vector3(),
 	    stepPercentage = 1 - deltaY / 20;
 	
-	vector.sub(camera.position, app.cameraTargetVector);
+	vector.subVectors(camera.position, app.cameraTargetVector);
 	vector.x *= stepPercentage;
 	vector.y *= stepPercentage;
 	vector.z *= stepPercentage;
 	
-	camera.position.add(app.cameraTargetVector, vector);
+	camera.position.addVectors(app.cameraTargetVector, vector);
 }
 
 app.animate = function(timestamp){
+	if(!app.start){
+		app.start = Date.now();
+	}
+	
 	stats1.begin();
 	stats2.begin();
+	
+	// handle events once per frame
+	var event = {
+		pageX: window.pageX,
+		pageY: window.pageY,
+	};
+	if (app.cameraCurrentActions.rotating){
+		app.cameraRotate(event);
+	}
+	if (app.cameraCurrentActions.panning){
+		app.cameraPan(event);
+	}
+	
+	app.pageX = window.pageX;
+	app.pageY = window.pageY;
+	// end handle events
+	
+	var progress = timestamp-app.start;
 	
 	// note: three.js includes requestAnimationFrame shim
 	requestAnimationFrame(app.animate, renderer.domElement);
 	
+	THREE.AnimationHandler.update(progress);
 	renderer.render( scene, camera );
 	
 	stats1.end();
