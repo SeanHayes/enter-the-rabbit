@@ -12,45 +12,39 @@ var RAD_TO_DEGREES = 180/Math.PI;
 var animation = {
 	name: "punch",
 	length: 6000,
-	fps: 0.03,  // fpms actually
+	fps: 30,
 	hierarchy: [
 		{
-		parent: 11,
-		keys: [
-			{
-				time: 0,
-				pos: [ 0, 0, 0 ],
-				rot: [ 0, 0, 0, 0 ],
-				scl: [ 10, 10, 10 ]
-			},
-			{
-				time: 2000,
-				rot: [ 5, 5, 0, 0 ]
-			},
-			{
-				time: 6000,
-				pos: [ 0, 0, 0 ],
-				rot: [ 10, 10, 0, 0 ],
-				scl: [ 10, 10, 10 ]
-			}
-		]
+			parent: 11,
+			keys: [
+				{
+					time: 0,
+					pos: [ 0, 0, 0 ],
+					rot: [ 0, 0, 0, 0 ],
+					scl: [ 10, 10, 10 ]
+				},
+				{
+					time: 2000,
+					rot: [ 5, 5, 0, 0 ],
+					scl: [ 10, 10, 10 ]
+				},
+				{
+					time: 6000,
+					pos: [ 0, 0, 0 ],
+					rot: [ 10, 10, 0, 0 ],
+					scl: [ 10, 10, 10 ]
+				}
+			]
 		},
 	]
 }
-THREE.AnimationHandler.add(animation);
 
 // Begin Stats
 stats1 = new Stats();
 stats1.setMode(0);
-stats1.domElement.style.position = 'absolute';
-stats1.domElement.style.left = '0px';
-stats1.domElement.style.top = '0px';
 
 stats2 = new Stats();
 stats2.setMode(1);
-stats2.domElement.style.position = 'absolute';
-stats2.domElement.style.left = '0px';
-stats2.domElement.style.top = '50px';
 // End Stats
 
 $(document).ready(function(){
@@ -169,8 +163,8 @@ app.init = function(){
 		mesh.scale.set( 10, 10, 10 );
 		scene.add(mesh);
 		
-		//var punchAni = new THREE.Animation(mesh, 'punch');
-		//punchAni.play(false);
+		punchAni = new THREE.Animation(mesh, animation);
+		punchAni.play(false);
 		console.debug(mesh);
 	});
 	// End Add Body
@@ -279,13 +273,10 @@ app.cameraZoom = function(event, delta, deltaX, deltaY){
 	camera.position.addVectors(app.cameraTargetVector, vector);
 }
 
-app.animate = function(timestamp){
+app.animate = function(timeDelta){
 	if(!app.start){
 		app.start = Date.now();
 	}
-	
-	stats1.begin();
-	stats2.begin();
 	
 	// handle events once per frame
 	var event = {
@@ -303,16 +294,15 @@ app.animate = function(timestamp){
 	app.pageY = window.pageY;
 	// end handle events
 	
-	var progress = timestamp-app.start;
 	
 	// note: three.js includes requestAnimationFrame shim
 	requestAnimationFrame(app.animate, renderer.domElement);
 	
-	THREE.AnimationHandler.update(progress);
+	THREE.AnimationHandler.update(timeDelta);
 	renderer.render( scene, camera );
 	
-	stats1.end();
-	stats2.end();
+	stats1.update();
+	stats2.update();
 }
 
 })(jQuery);
