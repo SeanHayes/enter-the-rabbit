@@ -1220,7 +1220,7 @@ tQuery.World	= function(opts)
 		this._addGetWebGLMessage();
 		throw new Error("WebGL required and not available")
 	}
-	this._renderer.setClearColorHex( 0xBBBBBB, 1 );
+	this._renderer.setClearColor( 0xBBBBBB, 1 );
 	this._renderer.setSize( opts.renderW, opts.renderH );
 };
 

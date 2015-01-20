@@ -12,3 +12,7 @@ enter-the-rabbit
 > "Why are you so certain?" asked the student.
 > 
 > "Because the fox is running for his dinner, but the rabbit is running for his life."
+
+
+http://chimera.labs.oreilly.com/books/1234000000802/ch05.html#driving_animation_with_requestanimationf
+http://stackoverflow.com/questions/20433474/dynamic-bones-animation-in-three-js
